@@ -1,0 +1,10 @@
+{
+    "name": "bravecollective/neucore-plugin-forum",
+    "type": "project",
+    "license": "MIT",
+    "require": {
+        "php": "^7.3|^8.0",
+        "ext-pdo": "*",
+        "tkhamez/neucore-plugin": "^0.1.0"
+    }
+}
