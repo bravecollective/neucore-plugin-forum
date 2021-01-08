@@ -49,7 +49,7 @@ class Service implements ServiceInterface
     {
         $pdo = $this->dbConnect();
         if ($pdo === null) {
-            return [];
+            throw new Exception();
         }
 
         $characterIds = array_map(function (CoreCharacter $character) {
@@ -263,7 +263,6 @@ class Service implements ServiceInterface
         }
     }
 
-    /** @noinspection DuplicatedCode */
     private function generatePassword(int $length): string
     {
         $characters = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789";
@@ -283,7 +282,7 @@ class Service implements ServiceInterface
     {
         try {
             $pdo = new PDO(
-                $_ENV['NEUCORE_PLUGIN_FORUM_DB_DSN'],
+                "mysql:dbname={$_ENV['NEUCORE_PLUGIN_FORUM_DB_NAME']};host={$_ENV['NEUCORE_PLUGIN_FORUM_DB_HOST']}",
                 $_ENV['NEUCORE_PLUGIN_FORUM_DB_USERNAME'],
                 $_ENV['NEUCORE_PLUGIN_FORUM_DB_PASSWORD']
             );
@@ -316,13 +315,21 @@ class Service implements ServiceInterface
 
         $this->readConfig();
 
-        // include necessary phpBB functions
+        // define required constants
+        if (!defined('Patchwork\Utf8\MB_OVERLOAD_STRING')) {
+            // There's a fatal error with PHP 8 without this in
+            // phpBB3/vendor/patchwork/utf8/src/Patchwork/Utf8/Bootup.php
+            // This will probably not work if the mbstring extension is missing.
+            // See also phpBB3/vendor/patchwork/utf8/src/Patchwork/Utf8/Bootup/mbstring.php
+            define('Patchwork\Utf8\MB_OVERLOAD_STRING', 2);
+        }
         define('IN_PHPBB', true);
         define('PHPBB_INSTALLED', true); // will send a header("location") otherwise
 
         // development = necessary to have errors in the Neucore log, but notices will cause errors!
-        define('PHPBB_ENVIRONMENT', 'development');
-        #define('PHPBB_ENVIRONMENT', 'production');
+        // but DEV does not work with PHP 8: Declaration of phpbb\debug\error_handler::handleError ...
+        #define('PHPBB_ENVIRONMENT', 'development');
+        define('PHPBB_ENVIRONMENT', 'production');
 
         // Variables that needs to be global.
         global $phpbb_root_path, $phpEx, $table_prefix;
@@ -331,14 +338,15 @@ class Service implements ServiceInterface
         $table_prefix = "phpbb_";
 
         // write config file for phpBB
-        if (! is_file($phpbb_root_path.'/config.php')) {
+        $phpBbConfig = file_get_contents($phpbb_root_path.'/config.php');
+        if (empty($phpBbConfig)) {
             file_put_contents(
                 $phpbb_root_path.'/config.php',
                 '<?php
                 $dbms = "phpbb\\db\\driver\\mysqli";
                 $dbhost = "'.$_ENV['NEUCORE_PLUGIN_FORUM_DB_HOST'].'";
                 $dbport = "3306";
-                $dbname = "phpbb";
+                $dbname = "'.$_ENV['NEUCORE_PLUGIN_FORUM_DB_NAME'].'";
                 $dbuser = "'.$_ENV['NEUCORE_PLUGIN_FORUM_DB_USERNAME'].'";
                 $dbpasswd = "'.$_ENV['NEUCORE_PLUGIN_FORUM_DB_PASSWORD'].'";
                 $table_prefix = "'.$table_prefix.'";
@@ -376,6 +384,7 @@ class Service implements ServiceInterface
         /** @noinspection PhpUnusedLocalVariableInspection */
         global $phpbb_container, $phpbb_dispatcher, $request;
 
+        // include necessary phpBB functions
         require_once $phpbb_root_path . 'common.'.$phpEx;
         require_once $phpbb_root_path . 'includes/functions_user.'.$phpEx;
 

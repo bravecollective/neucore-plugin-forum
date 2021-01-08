@@ -1,0 +1,19 @@
+<?php
+
+return [
+    'cfg_bb_path' => '/app/phpbb/htdocs/',
+    'cfg_bb_groups' => array(
+        'register' => 5,
+        'inactive' => 6,
+        'admin'    => 7,
+        'spai'     => 8,
+        'brave'    => 9,
+    ),
+    'cfg_bb_group_by_tag' => array(
+        'admin' => array('admin'),
+    ),
+    'cfg_bb_group_default_by_tag' => array(
+        'default' => array(0, 'spai'),
+        'member'  => array(2, 'brave'),
+    )
+];
