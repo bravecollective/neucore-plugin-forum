@@ -3,11 +3,11 @@
 return [
     'cfg_bb_path' => '/app/phpbb/htdocs/',
     'cfg_bb_groups' => array(
-        'register' => 5,
-        'inactive' => 6,
-        'admin'    => 7,
-        'spai'     => 8,
-        'brave'    => 9,
+        'register' => 2,
+        'inactive' => 14,
+        'admin'    => 5,
+        'spai'     => 10,
+        'brave'    => 8,
     ),
     'cfg_bb_group_by_tag' => array(
         'admin' => array('admin'),
