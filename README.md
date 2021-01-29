@@ -3,14 +3,14 @@
 ## Requirements
 
 - A [Neucore](https://github.com/bravecollective/neucore) installation. 
-- A [phpBB](https://www.phpbb.com/) installation
+- A [phpBB](https://www.phpbb.com/) installation, v3.2.
 
 The phpBB installation needs two custom profile fields (Admin -> Users and Groups -> Custom profile fields)
 of type `Single text fields`:
 - `core_corp_name`
 - `core_alli_name`
 
-I you use a fresh phpBB installation you must create groups if you want to test anything. 
+If you use a fresh phpBB installation you must create groups if you want to test anything. 
 Go to Admin -> General -> Manage groups and add the first group with the name brave, it should 
 get the ID 8. See config.php.dist for more.
 

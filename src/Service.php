@@ -81,6 +81,9 @@ class Service implements ServiceInterface
         string $emailAddress,
         array $allCharacterIds
     ): ServiceAccountData {
+        if (empty($character->name)) {
+            throw new Exception();
+        }
         $pdo = $this->dbConnect();
         if ($pdo === null) {
             throw new Exception();
@@ -108,7 +111,7 @@ class Service implements ServiceInterface
         }
 
         // save groups
-        $this->addGroups($pdo, $character, $groups);
+        $this->addGroups($pdo, $character->id, $groups);
 
         $phpBB = $this->getPhpBB();
 
@@ -152,7 +155,7 @@ class Service implements ServiceInterface
         }
 
         // add groups
-        $this->addGroups($pdo, $character, $groups);
+        $this->addGroups($pdo, $character->id, $groups);
 
         // update character - do not change name
         $stmtUpdate = $pdo->prepare(
@@ -163,8 +166,8 @@ class Service implements ServiceInterface
         try {
             $stmtUpdate->execute([
                 'id' => $character->id,
-                'corporation_name' => $character->corporationName,
-                'alliance_name' => $character->allianceName,
+                'corporation_name' => (string)$character->corporationName,
+                'alliance_name' => (string)$character->allianceName,
                 ':last_update' => gmdate('Y-m-d H:i:s'),
             ]);
         } catch (PDOException $e) {
@@ -217,6 +220,26 @@ class Service implements ServiceInterface
         return $password;
     }
 
+    public function getAllAccounts(): array
+    {
+        $pdo = $this->dbConnect();
+        if ($pdo === null) {
+            throw new Exception();
+        }
+
+        $stmt = $pdo->prepare("SELECT id, username FROM characters ORDER BY last_update");
+        try {
+            $stmt->execute();
+        } catch (PDOException $e) {
+            $this->logger->error($e->getMessage(), ['exception' => $e]);
+            throw new Exception();
+        }
+
+        return array_map(function (array $row) {
+            return (int)$row['id'];
+        }, $stmt->fetchAll(PDO::FETCH_ASSOC));
+    }
+
     /**
      * @param CoreGroup[] $groups
      * @return string
@@ -250,12 +273,12 @@ class Service implements ServiceInterface
     /**
      * @throws Exception
      */
-    private function addGroups(PDO $pdo, CoreCharacter $character, array $groups)
+    private function addGroups(PDO $pdo, int $characterId, array $groups)
     {
         $stmt = $pdo->prepare("INSERT INTO character_groups (character_id, name)  VALUES (:character_id, :name)");
         foreach ($groups as $group) {
             try {
-                $stmt->execute([':character_id' => $character->id, ':name' => $group->name]);
+                $stmt->execute([':character_id' => $characterId, ':name' => $group->name]);
             } catch (PDOException $e) {
                 $this->logger->error($e->getMessage(), ['exception' => $e]);
                 throw new Exception();
