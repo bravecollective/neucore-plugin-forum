@@ -25,6 +25,11 @@ class Service implements ServiceInterface
     private $logger;
 
     /**
+     * @var PDO|null
+     */
+    private $pdo;
+
+    /**
      * @var array
      */
     private $config;
@@ -303,20 +308,22 @@ class Service implements ServiceInterface
 
     private function dbConnect(): ?PDO
     {
-        try {
-            $pdo = new PDO(
-                "mysql:dbname={$_ENV['NEUCORE_PLUGIN_FORUM_DB_NAME']};host={$_ENV['NEUCORE_PLUGIN_FORUM_DB_HOST']}",
-                $_ENV['NEUCORE_PLUGIN_FORUM_DB_USERNAME'],
-                $_ENV['NEUCORE_PLUGIN_FORUM_DB_PASSWORD']
-            );
-        } catch (PDOException $e) {
-            $this->logger->error($e->getMessage(), ['exception' => $e]);
-            return null;
+        if ($this->pdo === null) {
+            try {
+                $this->pdo = new PDO(
+                    "mysql:dbname={$_ENV['NEUCORE_PLUGIN_FORUM_DB_NAME']};host={$_ENV['NEUCORE_PLUGIN_FORUM_DB_HOST']}",
+                    $_ENV['NEUCORE_PLUGIN_FORUM_DB_USERNAME'],
+                    $_ENV['NEUCORE_PLUGIN_FORUM_DB_PASSWORD']
+                );
+            } catch (PDOException $e) {
+                $this->logger->error($e->getMessage(), ['exception' => $e]);
+                return null;
+            }
+
+            $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         }
 
-        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-
-        return $pdo;
+        return $this->pdo;
     }
 
     private function readConfig(): void
