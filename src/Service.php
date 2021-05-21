@@ -52,16 +52,13 @@ class Service implements ServiceInterface
      */
     public function getAccounts(array $characters, array $groups): array
     {
-        $pdo = $this->dbConnect();
-        if ($pdo === null) {
-            throw new Exception();
-        }
+        $this->dbConnect();
 
         $characterIds = array_map(function (CoreCharacter $character) {
             return $character->id;
         }, $characters);
         $placeholders = implode(',', array_fill(0, count($characterIds), '?'));
-        $stmt = $pdo->prepare("SELECT id, username FROM characters WHERE id IN ($placeholders)");
+        $stmt = $this->pdo->prepare("SELECT id, username FROM characters WHERE id IN ($placeholders)");
         try {
             $stmt->execute($characterIds);
         } catch (PDOException $e) {
@@ -77,7 +74,6 @@ class Service implements ServiceInterface
     /**
      * @param CoreGroup[] $groups
      * @param int[] $allCharacterIds
-     * @return ServiceAccountData
      * @throws Exception
      */
     public function register(
@@ -89,15 +85,12 @@ class Service implements ServiceInterface
         if (empty($character->name)) {
             throw new Exception();
         }
-        $pdo = $this->dbConnect();
-        if ($pdo === null) {
-            throw new Exception();
-        }
+        $this->dbConnect();
 
         $username = $character->name;
 
         // create character
-        $stmt = $pdo->prepare("
+        $stmt = $this->pdo->prepare("
             INSERT INTO characters (id, name, username, corporation_name, alliance_name, last_update) 
             VALUES (:id, :name, :username, :corporation_name, :alliance_name, :last_update)"
         );
@@ -116,7 +109,7 @@ class Service implements ServiceInterface
         }
 
         // save groups
-        $this->addGroups($pdo, $character->id, $groups);
+        $this->addGroups($character->id, $groups);
 
         $phpBB = $this->getPhpBB();
 
@@ -135,7 +128,7 @@ class Service implements ServiceInterface
             throw new Exception();
         }
 
-        $password = $this->generatePassword(10);
+        $password = $this->generatePassword();
         if (!$phpBB->brave_bb_account_password((int)$userId, $password)) {
             throw new Exception();
         }
@@ -143,15 +136,15 @@ class Service implements ServiceInterface
         return new ServiceAccountData($character->id, $username, $password);
     }
 
+    /**
+     * @throws Exception
+     */
     public function updateAccount(CoreCharacter $character, array $groups): void
     {
-        $pdo = $this->dbConnect();
-        if ($pdo === null) {
-            throw new Exception();
-        }
+        $this->dbConnect();
 
         // delete all groups
-        $stmtDelete = $pdo->prepare("DELETE FROM character_groups WHERE character_id = :id");
+        $stmtDelete = $this->pdo->prepare("DELETE FROM character_groups WHERE character_id = :id");
         try {
             $stmtDelete->execute(['id' => $character->id]);
         } catch (PDOException $e) {
@@ -160,10 +153,10 @@ class Service implements ServiceInterface
         }
 
         // add groups
-        $this->addGroups($pdo, $character->id, $groups);
+        $this->addGroups($character->id, $groups);
 
         // update character - do not change name
-        $stmtUpdate = $pdo->prepare(
+        $stmtUpdate = $this->pdo->prepare(
             "UPDATE characters 
             SET last_update = :last_update, corporation_name = :corporation_name, alliance_name = :alliance_name
             WHERE id = :id"
@@ -183,7 +176,7 @@ class Service implements ServiceInterface
         $phpBB = $this->getPhpBB();
 
         // get forum user
-        $username = $this->getForumUsername($pdo, $character->id);
+        $username = $this->getForumUsername($character->id);
         $userId = $phpBB->brave_bb_user_name_to_id($username);
         if ($userId === false) {
             throw new Exception();
@@ -200,14 +193,14 @@ class Service implements ServiceInterface
         }
     }
 
+    /**
+     * @throws Exception
+     */
     public function resetPassword(int $characterId): string
     {
-        $pdo = $this->dbConnect();
-        if ($pdo === null) {
-            throw new Exception();
-        }
+        $this->dbConnect();
 
-        $username = $this->getForumUsername($pdo, $characterId);
+        $username = $this->getForumUsername($characterId);
 
         $phpBB = $this->getPhpBB();
 
@@ -217,7 +210,7 @@ class Service implements ServiceInterface
             throw new Exception();
         }
 
-        $password = $this->generatePassword(10);
+        $password = $this->generatePassword();
         if (!$phpBB->brave_bb_account_password((int)$userId, $password)) {
             throw new Exception();
         }
@@ -225,14 +218,14 @@ class Service implements ServiceInterface
         return $password;
     }
 
+    /**
+     * @throws Exception
+     */
     public function getAllAccounts(): array
     {
-        $pdo = $this->dbConnect();
-        if ($pdo === null) {
-            throw new Exception();
-        }
+        $this->dbConnect();
 
-        $stmt = $pdo->prepare("SELECT id, username FROM characters ORDER BY last_update");
+        $stmt = $this->pdo->prepare("SELECT id, username FROM characters ORDER BY last_update");
         try {
             $stmt->execute();
         } catch (PDOException $e) {
@@ -261,9 +254,9 @@ class Service implements ServiceInterface
     /**
      * @throws Exception
      */
-    private function getForumUsername(PDO $pdo, int $characterId): string
+    private function getForumUsername(int $characterId): string
     {
-        $stmt = $pdo->prepare("SELECT username FROM characters WHERE id = :id");
+        $stmt = $this->pdo->prepare("SELECT username FROM characters WHERE id = :id");
         try {
             $stmt->execute([':id' => $characterId]);
         } catch (PDOException $e) {
@@ -278,9 +271,9 @@ class Service implements ServiceInterface
     /**
      * @throws Exception
      */
-    private function addGroups(PDO $pdo, int $characterId, array $groups)
+    private function addGroups(int $characterId, array $groups)
     {
-        $stmt = $pdo->prepare("INSERT INTO character_groups (character_id, name)  VALUES (:character_id, :name)");
+        $stmt = $this->pdo->prepare("INSERT INTO character_groups (character_id, name) VALUES (:character_id, :name)");
         foreach ($groups as $group) {
             try {
                 $stmt->execute([':character_id' => $characterId, ':name' => $group->name]);
@@ -291,12 +284,12 @@ class Service implements ServiceInterface
         }
     }
 
-    private function generatePassword(int $length): string
+    private function generatePassword(): string
     {
         $characters = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789";
         $max = mb_strlen($characters) - 1;
         $pass = '';
-        for ($i = 0; $i < $length; $i++) {
+        for ($i = 0; $i < 10; $i++) {
             try {
                 $pass .= $characters[random_int(0, $max)];
             } catch (\Exception $e) {
@@ -306,7 +299,10 @@ class Service implements ServiceInterface
         return $pass;
     }
 
-    private function dbConnect(): ?PDO
+    /**
+     * @throws Exception
+     */
+    private function dbConnect(): void
     {
         if ($this->pdo === null) {
             try {
@@ -316,14 +312,11 @@ class Service implements ServiceInterface
                     $_ENV['NEUCORE_PLUGIN_FORUM_DB_PASSWORD']
                 );
             } catch (PDOException $e) {
-                $this->logger->error($e->getMessage(), ['exception' => $e]);
-                return null;
+                $this->logger->error($e->getMessage() . ' at ' . __FILE__ . ':' . __LINE__);
+                throw new Exception();
             }
-
             $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         }
-
-        return $this->pdo;
     }
 
     private function readConfig(): void
