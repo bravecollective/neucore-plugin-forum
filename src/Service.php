@@ -338,6 +338,9 @@ class Service implements ServiceInterface
 
         $this->readConfig();
 
+        // Note: This was initially written for phpBB version 3.2.2,
+        //       worked unmodified with phpBB version 3.3.4.
+
         // define required constants
         if (!defined('Patchwork\Utf8\MB_OVERLOAD_STRING')) {
             // There's a fatal error with PHP 8 without this in

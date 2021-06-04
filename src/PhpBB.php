@@ -7,7 +7,7 @@ use phpbb\config\db;
 use phpbb\db\driver\driver_interface;
 use phpbb\profilefields\manager;
 use phpbb\user;
-use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\DependencyInjection\Container;
 
 /**
  * phpBB integration.
@@ -39,7 +39,7 @@ class PhpBB
     private $configGroupByTag;
 
     /**
-     * @var ContainerBuilder
+     * @var Container
      */
     private $phpBBContainer;
 
@@ -62,7 +62,7 @@ class PhpBB
         array $cfg_bb_groups,
         array $cfg_bb_group_default_by_tag,
         array $cfg_bb_group_by_tag,
-        ContainerBuilder $phpbb_container,
+        Container $phpbb_container,
         db $config,
         driver_interface $db,
         user $user
