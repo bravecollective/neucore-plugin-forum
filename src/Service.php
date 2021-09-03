@@ -39,7 +39,7 @@ class Service implements ServiceInterface
      */
     private $phpBB;
 
-    public function __construct(LoggerInterface $logger)
+    public function __construct(LoggerInterface $logger, string $configurationData)
     {
         $this->logger = $logger;
     }
@@ -325,11 +325,9 @@ class Service implements ServiceInterface
             return;
         }
 
-        /** @noinspection PhpIncludeInspection */
         $this->config = include $_ENV['NEUCORE_PLUGIN_FORUM_CONFIG_FILE'];
     }
 
-    /** @noinspection PhpIncludeInspection */
     private function getPhpBB(): PhpBB
     {
         if ($this->phpBB !== null) {
