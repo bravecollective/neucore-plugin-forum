@@ -6,10 +6,13 @@ use Neucore\Plugin\CoreCharacter;
 use Neucore\Plugin\CoreGroup;
 use Neucore\Plugin\Exception;
 use Neucore\Plugin\ServiceAccountData;
+use Neucore\Plugin\ServiceConfiguration;
 use Neucore\Plugin\ServiceInterface;
 use PDO;
 use PDOException;
 use phpbb\request\request;
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -39,18 +42,18 @@ class Service implements ServiceInterface
      */
     private $phpBB;
 
-    public function __construct(LoggerInterface $logger, string $configurationData)
+    /** @noinspection PhpUnusedParameterInspection */
+    public function __construct(LoggerInterface $logger, ServiceConfiguration $serviceConfiguration)
     {
         $this->logger = $logger;
     }
 
     /**
      * @param CoreCharacter[] $characters
-     * @param CoreGroup[] $groups
      * @return ServiceAccountData[]
      * @throws Exception
      */
-    public function getAccounts(array $characters, array $groups): array
+    public function getAccounts(array $characters): array
     {
         $this->dbConnect();
 
@@ -139,7 +142,7 @@ class Service implements ServiceInterface
     /**
      * @throws Exception
      */
-    public function updateAccount(CoreCharacter $character, array $groups): void
+    public function updateAccount(CoreCharacter $character, array $groups, ?CoreCharacter $mainCharacter): void
     {
         $this->dbConnect();
 
@@ -193,6 +196,11 @@ class Service implements ServiceInterface
         }
     }
 
+    public function updatePlayerAccount(CoreCharacter $mainCharacter, array $groups): void
+    {
+        throw new Exception();
+    }
+
     /**
      * @throws Exception
      */
@@ -236,6 +244,11 @@ class Service implements ServiceInterface
         return array_map(function (array $row) {
             return (int)$row['id'];
         }, $stmt->fetchAll(PDO::FETCH_ASSOC));
+    }
+
+    public function getAllPlayerAccounts(): array
+    {
+        return [];
     }
 
     /**
@@ -428,5 +441,17 @@ class Service implements ServiceInterface
         );
 
         return $this->phpBB;
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function request(
+        CoreCharacter $coreCharacter,
+        string $name,
+        ServerRequestInterface $request,
+        ResponseInterface $response
+    ): ResponseInterface {
+        throw new Exception();
     }
 }
