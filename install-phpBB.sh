@@ -6,7 +6,8 @@ FILE=phpBB-3.3.4.tar.bz2
 URL=https://download.phpbb.com/pub/release/3.3/3.3.4/"$FILE"
 
 if [[ ! -f "${DIR}"/"$FILE" ]]; then
-  wget $URL -O "${DIR}"/"$FILE"
+  # Amazon Linux does not like the certificate from Let's Encrypt
+  wget --no-check-certificate $URL -O "${DIR}"/"$FILE"
 fi
 if [[ ! -f "${DIR}"/"$FILE" ]]; then
   echo Error: failed to download $URL
