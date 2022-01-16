@@ -5,7 +5,7 @@
     "require": {
         "php": "^7.3|^8.0",
         "ext-pdo": "*",
-        "tkhamez/neucore-plugin": "^0.6.0"
+        "tkhamez/neucore-plugin": "^0.7.0"
     },
     "config": {
         "platform": {
