@@ -201,6 +201,11 @@ class Service implements ServiceInterface
         throw new Exception();
     }
 
+    public function moveServiceAccount(int $toPlayerId, int $fromPlayerId): bool
+    {
+        return true;
+    }
+
     /**
      * @throws Exception
      */
