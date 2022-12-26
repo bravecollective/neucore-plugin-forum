@@ -3,7 +3,7 @@
 namespace Brave\Neucore\Plugin\Forum;
 
 use Exception;
-use phpbb\config\db;
+use phpbb\config\config;
 use phpbb\db\driver\driver_interface;
 use phpbb\profilefields\manager;
 use phpbb\user;
@@ -23,47 +23,26 @@ use Symfony\Component\DependencyInjection\Container;
  */
 class PhpBB
 {
-    /**
-     * @var array
-     */
-    private $configGroups;
+    private array $configGroups;
 
-    /**
-     * @var array
-     */
-    private $configGroupDefaultByTag;
+    private array $configGroupDefaultByTag;
 
-    /**
-     * @var array
-     */
-    private $configGroupByTag;
+    private array $configGroupByTag;
 
-    /**
-     * @var Container
-     */
-    private $phpBBContainer;
+    private Container $phpBBContainer;
 
-    /**
-     * @var db
-     */
-    private $config;
+    private config $config;
 
-    /**
-     * @var driver_interface
-     */
-    private $db;
+    private driver_interface $db;
 
-    /**
-     * @var user
-     */
-    private $user;
+    private user $user;
 
     public function __construct(
         array $cfg_bb_groups,
         array $cfg_bb_group_default_by_tag,
         array $cfg_bb_group_by_tag,
         Container $phpbb_container,
-        db $config,
+        config $config,
         driver_interface $db,
         user $user
     ) {
@@ -81,21 +60,18 @@ class PhpBB
         $this->user->data = ['user_id' => 0, 'user_email' => null];
     }
 
-    /**
-     * @return false|numeric
-     */
-    public function brave_bb_user_name_to_id(string $user_name)
+    public function brave_bb_user_name_to_id(string $user_name): ?int
     {
         $user_names = array($user_name);
         $user_ids = array();
         $result = user_get_id_name($user_ids, $user_names);
         if ($result) {
-            return false;
+            return null;
         }
         if (sizeof($user_ids) == 1) {
-            return $user_ids[0];
+            return (int)$user_ids[0];
         }
-        return false;
+        return null;
     }
 
     /*function brave_bb_account_activate($user_name)
@@ -122,7 +98,7 @@ class PhpBB
         $this->brave_bb_account_update($user_name);
     }*/
 
-    public function brave_bb_account_create($character_id, $user_name, $ipAddress)
+    public function brave_bb_account_create($character_id, $user_name, $ipAddress): ?int
     {
         $user = array(
             'username' => $user_name,
@@ -141,7 +117,7 @@ class PhpBB
 
         $user_id = $this->brave_bb_user_name_to_id($user_name);
 
-        add_log('user', $user_id, 'LOG_USER_GENERAL', 'Created user through CORE');
+        add_log('user', (string)$user_id, 'LOG_USER_GENERAL', 'Created user through CORE');
 
         return $user_id;
     }
@@ -156,7 +132,7 @@ class PhpBB
         /* @var $cp manager */
         try {
             $cp = $this->phpBBContainer->get('profilefields.manager');
-        } catch (Exception $e) {
+        } catch (Exception) {
             return false;
         }
 
@@ -199,7 +175,7 @@ class PhpBB
         $gIds_want = array_unique($gIds_want);
 
         $gIds_has = array();
-        foreach (group_memberships(false, [$user_id], false) as $g) {
+        foreach (group_memberships(false, [$user_id]) as $g) {
             $gid = $g['group_id'];
             if (! in_array($gid, $gIds_want)) {
                 group_user_del($gid, $user_id);
@@ -212,7 +188,7 @@ class PhpBB
             if (in_array($gid, $gIds_has)) {
                 continue;
             }
-            group_user_add($gid, $user_id, false, false, false);
+            group_user_add($gid, $user_id);
         }
 
         group_set_user_default($gid_default, [$user_id], false, true);
@@ -224,7 +200,7 @@ class PhpBB
     {
         try {
             $passwords_manager = $this->phpBBContainer->get('passwords.manager');
-        } catch (Exception $e) {
+        } catch (Exception) {
             return false;
         }
 

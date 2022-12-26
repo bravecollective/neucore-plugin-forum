@@ -22,27 +22,14 @@ use Psr\Log\LoggerInterface;
  */
 class Service implements ServiceInterface
 {
-    /**
-     * @var LoggerInterface
-     */
-    private $logger;
+    private LoggerInterface $logger;
 
-    /**
-     * @var PDO|null
-     */
-    private $pdo;
+    private ?PDO $pdo = null;
 
-    /**
-     * @var array
-     */
-    private $config;
+    private ?array $config = null;
 
-    /**
-     * @var PhpBB
-     */
-    private $phpBB;
+    private ?PhpBB $phpBB = null;
 
-    /** @noinspection PhpUnusedParameterInspection */
     public function __construct(LoggerInterface $logger, ServiceConfiguration $serviceConfiguration)
     {
         $this->logger = $logger;
@@ -118,11 +105,11 @@ class Service implements ServiceInterface
 
         $ipAddress = $_SERVER['REMOTE_ADDR'] ?? '';
         $userId = $phpBB->brave_bb_account_create($character->id, $username, $ipAddress);
-        if ($userId === false) {
+        if (!$userId) {
             throw new Exception();
         }
 
-        $success = $phpBB->brave_bb_account_update((int)$userId, [
+        $success = $phpBB->brave_bb_account_update($userId, [
             'corporation_name' => $character->corporationName,
             'alliance_name' => $character->allianceName,
             'core_tags' => $this->getGroupNames($groups)
@@ -132,7 +119,7 @@ class Service implements ServiceInterface
         }
 
         $password = $this->generatePassword();
-        if (!$phpBB->brave_bb_account_password((int)$userId, $password)) {
+        if (!$phpBB->brave_bb_account_password($userId, $password)) {
             throw new Exception();
         }
 
@@ -181,12 +168,12 @@ class Service implements ServiceInterface
         // get forum user
         $username = $this->getForumUsername($character->id);
         $userId = $phpBB->brave_bb_user_name_to_id($username);
-        if ($userId === false) {
+        if (!$userId) {
             throw new Exception();
         }
 
         // update forum groups
-        $success = $phpBB->brave_bb_account_update((int)$userId, [
+        $success = $phpBB->brave_bb_account_update($userId, [
             'corporation_name' => $character->corporationName,
             'alliance_name' => $character->allianceName,
             'core_tags' => $this->getGroupNames($groups)
@@ -219,12 +206,12 @@ class Service implements ServiceInterface
 
         // get forum user
         $userId = $phpBB->brave_bb_user_name_to_id($username);
-        if ($userId === false) {
+        if (!$userId) {
             throw new Exception();
         }
 
         $password = $this->generatePassword();
-        if (!$phpBB->brave_bb_account_password((int)$userId, $password)) {
+        if (!$phpBB->brave_bb_account_password($userId, $password)) {
             throw new Exception();
         }
 
@@ -254,6 +241,23 @@ class Service implements ServiceInterface
     public function getAllPlayerAccounts(): array
     {
         return [];
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function request(
+        CoreCharacter $coreCharacter,
+        string $name,
+        ServerRequestInterface $request,
+        ResponseInterface $response,
+        array $groups
+    ): ResponseInterface {
+        throw new Exception();
+    }
+
+    public function onConfigurationChange(): void
+    {
     }
 
     /**
@@ -310,7 +314,7 @@ class Service implements ServiceInterface
         for ($i = 0; $i < 10; $i++) {
             try {
                 $pass .= $characters[random_int(0, $max)];
-            } catch (\Exception $e) {
+            } catch (\Exception) {
                 $pass .= $characters[rand(0, $max)];
             }
         }
@@ -446,18 +450,5 @@ class Service implements ServiceInterface
         );
 
         return $this->phpBB;
-    }
-
-    /**
-     * @throws Exception
-     */
-    public function request(
-        CoreCharacter $coreCharacter,
-        string $name,
-        ServerRequestInterface $request,
-        ResponseInterface $response,
-        array $groups
-    ): ResponseInterface {
-        throw new Exception();
     }
 }
