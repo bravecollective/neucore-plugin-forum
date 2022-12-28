@@ -1,0 +1,69 @@
+#file: noinspection YAMLSchemaValidation
+
+###
+### Required configuration
+###
+
+# A name for the plugin
+name: Forum registration
+
+# Type of the plugin. The only possible value for now is "service".
+type: service
+
+# Full class name of class implementing Neucore\Plugin\ServiceInterface.
+phpClass: Brave\Neucore\Plugin\Forum\Service
+
+# PHP namespace that should be loaded by the PSR-4 autoloader.
+psr4Prefix: Brave\Neucore\Plugin\Forum
+
+# Relative (to this file) path to the directory containing the classes of the above namespace.
+psr4Path: src
+
+# Defines if this service allows only one account per player instead of one per character.
+oneAccount: false
+
+# List of available account properties, possible values: username, password, email, status, name
+properties:
+  - username
+  - password
+
+# If this is not enabled and the account contains a password (see properties), the user will be able to see
+# it only once after it is reset (see actions).
+showPassword: false
+
+# List of actions, possible values: update-account, reset-password
+actions:
+  - update-account
+  - reset-password
+
+
+###
+### Optional configuration
+###
+
+# List of link buttons. Placeholders for URL: {plugin_id}, {username}, {password}, {email}
+URLs:
+  -
+    url: https://forums.bravecollective.com/
+    title: Forum login
+    target: _blank
+
+# Text above the list of accounts (supports multiline text).
+textTop:
+  'For each associated character in Brave Core, your character inherits the permissions from that character 
+  (e.g. access to corp forums in case they exist).
+  
+  Be aware that you can change your password in the forum itself or use this page to generate a new random 
+  password anytime.'
+
+# Text below account table (supports multiline text).
+textAccount:
+
+# Text below the registration form/button (supports multiline text).
+textRegister:
+
+# Text below an account with status "pending" (supports multiline text).
+textPending:
+
+# Additional configuration for the plugin (supports multiline text).
+configurationData:
