@@ -2,11 +2,13 @@
 
 namespace Brave\Neucore\Plugin\Forum;
 
-use Neucore\Plugin\CoreCharacter;
-use Neucore\Plugin\CoreGroup;
+use Neucore\Plugin\Core\FactoryInterface;
+use Neucore\Plugin\Data\CoreAccount;
+use Neucore\Plugin\Data\CoreCharacter;
+use Neucore\Plugin\Data\CoreGroup;
+use Neucore\Plugin\Data\PluginConfiguration;
+use Neucore\Plugin\Data\ServiceAccountData;
 use Neucore\Plugin\Exception;
-use Neucore\Plugin\ServiceAccountData;
-use Neucore\Plugin\ServiceConfiguration;
 use Neucore\Plugin\ServiceInterface;
 use PDO;
 use PDOException;
@@ -30,9 +32,28 @@ class Service implements ServiceInterface
 
     private ?PhpBB $phpBB = null;
 
-    public function __construct(LoggerInterface $logger, ServiceConfiguration $serviceConfiguration)
-    {
+    public function __construct(
+        LoggerInterface $logger,
+        PluginConfiguration $pluginConfiguration,
+        FactoryInterface $factory,
+    ) {
         $this->logger = $logger;
+    }
+
+    public function onConfigurationChange(): void
+    {
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function request(
+        string $name,
+        ServerRequestInterface $request,
+        ResponseInterface $response,
+        ?CoreAccount $coreAccount,
+    ): ResponseInterface {
+        throw new Exception();
     }
 
     /**
@@ -243,21 +264,9 @@ class Service implements ServiceInterface
         return [];
     }
 
-    /**
-     * @throws Exception
-     */
-    public function request(
-        CoreCharacter $coreCharacter,
-        string $name,
-        ServerRequestInterface $request,
-        ResponseInterface $response,
-        array $groups
-    ): ResponseInterface {
-        throw new Exception();
-    }
-
-    public function onConfigurationChange(): void
+    public function search(string $query): array
     {
+        return [];
     }
 
     /**
