@@ -17,8 +17,6 @@ use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerInterface;
 
 /**
- * TODO the table character_groups is not used anymore
- *
  * @noinspection PhpUnused
  */
 class Service implements ServiceInterface
@@ -122,9 +120,6 @@ class Service implements ServiceInterface
             throw new Exception();
         }
 
-        // save groups
-        $this->addGroups($character->id, $groups);
-
         $password = $this->generatePassword();
         $ipAddress = $_SERVER['REMOTE_ADDR'] ?? '';
 
@@ -155,18 +150,6 @@ class Service implements ServiceInterface
     {
         $this->dbConnect();
         $this->setupPhpBbConfig();
-
-        // delete all groups
-        $stmtDelete = $this->pdo->prepare("DELETE FROM character_groups WHERE character_id = :id");
-        try {
-            $stmtDelete->execute(['id' => $character->id]);
-        } catch (PDOException $e) {
-            $this->logger->error(self::LOG_PREFIX . $e->getMessage(), ['exception' => $e]);
-            throw new Exception();
-        }
-
-        // add groups
-        $this->addGroups($character->id, $groups);
 
         // update character - do not change name
         $stmtUpdate = $this->pdo->prepare(
@@ -290,22 +273,6 @@ class Service implements ServiceInterface
         $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         return $result[0]['username'];
-    }
-
-    /**
-     * @throws Exception
-     */
-    private function addGroups(int $characterId, array $groups): void
-    {
-        $stmt = $this->pdo->prepare("INSERT INTO character_groups (character_id, name) VALUES (:character_id, :name)");
-        foreach ($groups as $group) {
-            try {
-                $stmt->execute([':character_id' => $characterId, ':name' => $group->name]);
-            } catch (PDOException $e) {
-                $this->logger->error(self::LOG_PREFIX . $e->getMessage(), ['exception' => $e]);
-                throw new Exception();
-            }
-        }
     }
 
     private function generatePassword(): string
