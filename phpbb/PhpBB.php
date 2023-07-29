@@ -6,6 +6,7 @@ use Brave\Neucore\Plugin\Forum\Shared;
 use Exception;
 use phpbb\config\config;
 use phpbb\db\driver\driver_interface;
+use phpbb\log\log_interface;
 use phpbb\profilefields\manager;
 use phpbb\request\request;
 use phpbb\user;
@@ -47,6 +48,11 @@ final class PhpBB
 
     private user $user;
 
+    private log_interface $phpBBLog;
+
+    /**
+     * @throws Exception
+     */
     public static function getInstance(string $configFile): PhpBB
     {
         if (self::$phpBB !== null) {
@@ -119,6 +125,7 @@ final class PhpBB
         $request->enable_super_globals();
 
         global $config, $db, $user; // These global variables were created with the common.php include
+        /** @noinspection PhpParamsInspection */
         self::$phpBB = new PhpBB(
             self::$config['cfg_bb_groups'],
             self::$config['cfg_bb_group_default_by_tag'],
@@ -126,7 +133,8 @@ final class PhpBB
             $phpbb_container,
             $config,
             $db,
-            $user
+            $user,
+            $phpbb_container->get('log')
         );
 
         return self::$phpBB;
@@ -226,7 +234,8 @@ final class PhpBB
         Container $phpbb_container,
         config $config,
         driver_interface $db,
-        user $user
+        user $user,
+        log_interface $phpBBLog,
     ) {
         $this->configGroups = $cfg_bb_groups;
         $this->configGroupDefaultByTag = $cfg_bb_group_default_by_tag;
@@ -236,6 +245,7 @@ final class PhpBB
         $this->phpBBConfig = $config;
         $this->db = $db;
         $this->user = $user;
+        $this->phpBBLog = $phpBBLog;
 
         // needed to prevent some undefined index errors in dev mode (the object is included via "global" in phpBB)
         // the user_id must *not* be the user ID that is used to do stuff
@@ -299,7 +309,10 @@ final class PhpBB
 
         $user_id = $this->brave_bb_user_name_to_id($user_name);
 
-        add_log('user', (string)$user_id, 'LOG_USER_GENERAL', 'Created user through CORE');
+        $this->phpBBLog->add('user', 0, '', 'LOG_USER_GENERAL', time(), [
+            'reportee_id' => (string)$user_id,
+            0 => 'Created user through CORE',
+        ]);
 
         return $user_id;
     }
@@ -398,7 +411,10 @@ final class PhpBB
 
         $this->user->reset_login_keys($user_id);
 
-        add_log('user', $user_id, 'LOG_USER_NEW_PASSWORD', 'Reset password through CORE');
+        $this->phpBBLog->add('user', 0, '', 'LOG_USER_NEW_PASSWORD', time(), [
+            'reportee_id' => $user_id,
+            0 => 'Reset password through CORE',
+        ]);
 
         return true;
     }

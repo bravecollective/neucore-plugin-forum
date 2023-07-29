@@ -12,7 +12,12 @@ if (count($argv) < 3) {
     exit(1);
 }
 
-$phpBB = PhpBB::getInstance($argv[1]);
+try {
+    $phpBB = PhpBB::getInstance($argv[1]);
+} catch (Exception $e) {
+    echo "{$e->getMessage()}\n";
+    exit(1);
+}
 $command = $argv[2] ?? null;
 
 $args = array_slice($argv, 3);
