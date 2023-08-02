@@ -12,7 +12,6 @@ use Neucore\Plugin\Exception;
 use Neucore\Plugin\ServiceInterface;
 use PDO;
 use PDOException;
-use phpbb\request\request;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerInterface;
@@ -24,13 +23,15 @@ use Psr\Log\LoggerInterface;
  */
 class Service implements ServiceInterface
 {
+    private const LOG_PREFIX = 'neucore-plugin-forum: ';
+
     private LoggerInterface $logger;
 
     private ?PDO $pdo = null;
 
-    private ?array $config = null;
+    private string $console = 'php ' . __DIR__ . '/../phpbb/console.php';
 
-    private ?PhpBB $phpBB = null;
+    private string $configFile;
 
     public function __construct(
         LoggerInterface $logger,
@@ -38,6 +39,7 @@ class Service implements ServiceInterface
         FactoryInterface $factory,
     ) {
         $this->logger = $logger;
+        $this->configFile = $_ENV['NEUCORE_PLUGIN_FORUM_CONFIG_FILE'] ?? '';
     }
 
     public function onConfigurationChange(): void
@@ -73,7 +75,7 @@ class Service implements ServiceInterface
         try {
             $stmt->execute($characterIds);
         } catch (PDOException $e) {
-            $this->logger->error($e->getMessage(), ['exception' => $e]);
+            $this->logger->error(self::LOG_PREFIX . $e->getMessage(), ['exception' => $e]);
             throw new Exception();
         }
 
@@ -97,6 +99,7 @@ class Service implements ServiceInterface
             throw new Exception();
         }
         $this->dbConnect();
+        $this->setupPhpBbConfig();
 
         $username = $character->name;
 
@@ -115,32 +118,30 @@ class Service implements ServiceInterface
                 ':last_update' => gmdate('Y-m-d h:i:s'),
             ]);
         } catch (PDOException $e) {
-            $this->logger->error($e->getMessage(), ['exception' => $e]);
+            $this->logger->error(self::LOG_PREFIX . $e->getMessage(), ['exception' => $e]);
             throw new Exception();
         }
 
         // save groups
         $this->addGroups($character->id, $groups);
 
-        $phpBB = $this->getPhpBB();
-
-        $ipAddress = $_SERVER['REMOTE_ADDR'] ?? '';
-        $userId = $phpBB->brave_bb_account_create($character->id, $username, $ipAddress);
-        if (!$userId) {
-            throw new Exception();
-        }
-
-        $success = $phpBB->brave_bb_account_update($userId, [
-            'corporation_name' => $character->corporationName,
-            'alliance_name' => $character->allianceName,
-            'core_tags' => $this->getGroupNames($groups)
-        ]);
-        if (!$success) {
-            throw new Exception();
-        }
-
         $password = $this->generatePassword();
-        if (!$phpBB->brave_bb_account_password($userId, $password)) {
+        $ipAddress = $_SERVER['REMOTE_ADDR'] ?? '';
+
+        $args = $this->getArgsString([
+            $this->configFile,
+            'register',
+            $username,
+            $password,
+            $character->id,
+            $this->getGroupNames($groups),
+            $character->corporationName,
+            $character->allianceName,
+            $ipAddress,
+        ]);
+        exec("$this->console $args", $output, $retVal);
+        if ($retVal !== 0) {
+            $this->logger->error(self::LOG_PREFIX . json_encode($output));
             throw new Exception();
         }
 
@@ -153,13 +154,14 @@ class Service implements ServiceInterface
     public function updateAccount(CoreCharacter $character, array $groups, ?CoreCharacter $mainCharacter): void
     {
         $this->dbConnect();
+        $this->setupPhpBbConfig();
 
         // delete all groups
         $stmtDelete = $this->pdo->prepare("DELETE FROM character_groups WHERE character_id = :id");
         try {
             $stmtDelete->execute(['id' => $character->id]);
         } catch (PDOException $e) {
-            $this->logger->error($e->getMessage(), ['exception' => $e]);
+            $this->logger->error(self::LOG_PREFIX . $e->getMessage(), ['exception' => $e]);
             throw new Exception();
         }
 
@@ -180,26 +182,21 @@ class Service implements ServiceInterface
                 ':last_update' => gmdate('Y-m-d H:i:s'),
             ]);
         } catch (PDOException $e) {
-            $this->logger->error($e->getMessage(), ['exception' => $e]);
+            $this->logger->error(self::LOG_PREFIX . $e->getMessage(), ['exception' => $e]);
             throw new Exception();
         }
 
-        $phpBB = $this->getPhpBB();
-
-        // get forum user
-        $username = $this->getForumUsername($character->id);
-        $userId = $phpBB->brave_bb_user_name_to_id($username);
-        if (!$userId) {
-            throw new Exception();
-        }
-
-        // update forum groups
-        $success = $phpBB->brave_bb_account_update($userId, [
-            'corporation_name' => $character->corporationName,
-            'alliance_name' => $character->allianceName,
-            'core_tags' => $this->getGroupNames($groups)
+        $args = $this->getArgsString([
+            $this->configFile,
+            'update-account',
+            $this->getForumUsername($character->id),
+            $character->corporationName,
+            $character->allianceName,
+            $this->getGroupNames($groups),
         ]);
-        if (!$success) {
+        exec("$this->console $args", $output, $retVal);
+        if ($retVal !== 0) {
+            $this->logger->error(self::LOG_PREFIX . json_encode($output));
             throw new Exception();
         }
     }
@@ -220,19 +217,15 @@ class Service implements ServiceInterface
     public function resetPassword(int $characterId): string
     {
         $this->dbConnect();
+        $this->setupPhpBbConfig();
 
         $username = $this->getForumUsername($characterId);
-
-        $phpBB = $this->getPhpBB();
-
-        // get forum user
-        $userId = $phpBB->brave_bb_user_name_to_id($username);
-        if (!$userId) {
-            throw new Exception();
-        }
-
         $password = $this->generatePassword();
-        if (!$phpBB->brave_bb_account_password($userId, $password)) {
+
+        $args = $this->getArgsString([$this->configFile, 'reset-password', $username, $password]);
+        exec("$this->console $args", $output, $retVal);
+        if ($retVal !== 0) {
+            $this->logger->error(self::LOG_PREFIX . json_encode($output));
             throw new Exception();
         }
 
@@ -250,7 +243,7 @@ class Service implements ServiceInterface
         try {
             $stmt->execute();
         } catch (PDOException $e) {
-            $this->logger->error($e->getMessage(), ['exception' => $e]);
+            $this->logger->error(self::LOG_PREFIX . $e->getMessage(), ['exception' => $e]);
             throw new Exception();
         }
 
@@ -291,7 +284,7 @@ class Service implements ServiceInterface
         try {
             $stmt->execute([':id' => $characterId]);
         } catch (PDOException $e) {
-            $this->logger->error($e->getMessage(), ['exception' => $e]);
+            $this->logger->error(self::LOG_PREFIX . $e->getMessage(), ['exception' => $e]);
             throw new Exception();
         }
         $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -302,14 +295,14 @@ class Service implements ServiceInterface
     /**
      * @throws Exception
      */
-    private function addGroups(int $characterId, array $groups)
+    private function addGroups(int $characterId, array $groups): void
     {
         $stmt = $this->pdo->prepare("INSERT INTO character_groups (character_id, name) VALUES (:character_id, :name)");
         foreach ($groups as $group) {
             try {
                 $stmt->execute([':character_id' => $characterId, ':name' => $group->name]);
             } catch (PDOException $e) {
-                $this->logger->error($e->getMessage(), ['exception' => $e]);
+                $this->logger->error(self::LOG_PREFIX . $e->getMessage(), ['exception' => $e]);
                 throw new Exception();
             }
         }
@@ -343,54 +336,16 @@ class Service implements ServiceInterface
                     $_ENV['NEUCORE_PLUGIN_FORUM_DB_PASSWORD']
                 );
             } catch (PDOException $e) {
-                $this->logger->error($e->getMessage() . ' at ' . __FILE__ . ':' . __LINE__);
+                $this->logger->error(self::LOG_PREFIX . $e->getMessage() . ' at ' . __FILE__ . ':' . __LINE__);
                 throw new Exception();
             }
             $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         }
     }
 
-    private function readConfig(): void
+    private function setupPhpBbConfig(): void
     {
-        if ($this->config !== null) {
-            return;
-        }
-
-        $this->config = include $_ENV['NEUCORE_PLUGIN_FORUM_CONFIG_FILE'];
-    }
-
-    private function getPhpBB(): PhpBB
-    {
-        if ($this->phpBB !== null) {
-            return $this->phpBB;
-        }
-
-        $this->readConfig();
-
-        // Note: This was initially written for phpBB version 3.2.2,
-        //       worked unmodified with phpBB version 3.3.4.
-
-        // define required constants
-        if (!defined('Patchwork\Utf8\MB_OVERLOAD_STRING')) {
-            // There's a fatal error with PHP 8 without this in
-            // phpBB3/vendor/patchwork/utf8/src/Patchwork/Utf8/Bootup.php
-            // This will probably not work if the mbstring extension is missing.
-            // See also phpBB3/vendor/patchwork/utf8/src/Patchwork/Utf8/Bootup/mbstring.php
-            define('Patchwork\Utf8\MB_OVERLOAD_STRING', 2);
-        }
-        define('IN_PHPBB', true);
-        define('PHPBB_INSTALLED', true); // will send a header("location") otherwise
-
-        // development = necessary to have errors in the Neucore log, but notices will cause errors!
-        // but DEV does not work with PHP 8: Declaration of phpbb\debug\error_handler::handleError ...
-        #define('PHPBB_ENVIRONMENT', 'development');
-        define('PHPBB_ENVIRONMENT', 'production');
-
-        // Variables that needs to be global.
-        global $phpbb_root_path, $phpEx, $table_prefix;
-        $phpbb_root_path = __DIR__.'/../phpBB3/';
-        $phpEx = "php";
-        $table_prefix = "phpbb_";
+        $phpbb_root_path = Shared::PHPBB_ROOT_PATH;
 
         // write config file for phpBB
         $phpBbConfig = file_get_contents($phpbb_root_path.'/config.php');
@@ -404,60 +359,20 @@ class Service implements ServiceInterface
                 $dbname = "'.$_ENV['NEUCORE_PLUGIN_FORUM_DB_NAME'].'";
                 $dbuser = "'.$_ENV['NEUCORE_PLUGIN_FORUM_DB_USERNAME'].'";
                 $dbpasswd = "'.$_ENV['NEUCORE_PLUGIN_FORUM_DB_PASSWORD'].'";
-                $table_prefix = "'.$table_prefix.'";
+                $table_prefix = "'.Shared::PHPBB_TABLE_PREFIX.'";
                 $phpbb_adm_relative_path = "adm/";
                 $acm_type = "phpbb\\\\cache\\\\driver\\\\file";
                 ',
             );
         }
+    }
 
-        // write development config if running in dev mode
-        if (PHPBB_ENVIRONMENT === 'development' && !is_file($phpbb_root_path.'/config/development/config.yml')) {
-            mkdir($phpbb_root_path.'/config/development');
-            mkdir($phpbb_root_path.'/config/development/container');
-            mkdir($phpbb_root_path.'/config/development/routing');
-            copy($phpbb_root_path.'/config/production/config.yml', $phpbb_root_path.'/config/development/config.yml');
-            copy(
-                $phpbb_root_path.'/config/production/container/environment.yml',
-                $phpbb_root_path.'/config/development/container/environment.yml'
-            );
-            copy(
-                $phpbb_root_path.'/config/production/container/parameters.yml',
-                $phpbb_root_path.'/config/development/container/parameters.yml'
-            );
-            copy(
-                $phpbb_root_path.'/config/production/container/services.yml',
-                $phpbb_root_path.'/config/development/container/services.yml'
-            );
-            copy(
-                $phpbb_root_path.'/config/production/routing/environment.yml',
-                $phpbb_root_path.'/config/development/routing/environment.yml'
-            );
+    private function getArgsString(array $args): string
+    {
+        $argsString = [];
+        foreach ($args as $arg) {
+            $argsString[] = escapeshellarg($arg);
         }
-
-        // a few variables from common.php need to be global
-        /** @noinspection PhpUnusedLocalVariableInspection */
-        global $phpbb_container, $phpbb_dispatcher, $request;
-
-        // include necessary phpBB functions
-        require_once $phpbb_root_path . 'common.'.$phpEx;
-        require_once $phpbb_root_path . 'includes/functions_user.'.$phpEx;
-
-        // phpBB overwrites super globals, but we need them.
-        /* @var request $request */
-        $request->enable_super_globals();
-
-        global $config, $db, $user; // These global variables were created with the common.php include
-        $this->phpBB = new PhpBB(
-            $this->config['cfg_bb_groups'],
-            $this->config['cfg_bb_group_default_by_tag'],
-            $this->config['cfg_bb_group_by_tag'],
-            $phpbb_container,
-            $config,
-            $db,
-            $user
-        );
-
-        return $this->phpBB;
+        return implode(' ', $argsString);
     }
 }
