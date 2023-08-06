@@ -1,5 +1,5 @@
 
-CREATE TABLE `characters` (
+CREATE TABLE `neucore_characters` (
     `id` bigint(20) NOT NULL,
     `name` varchar(255) NOT NULL,
     `username` varchar(255) NOT NULL,

@@ -69,7 +69,7 @@ class Service implements ServiceInterface
             return $character->id;
         }, $characters);
         $placeholders = implode(',', array_fill(0, count($characterIds), '?'));
-        $stmt = $this->pdo->prepare("SELECT id, username FROM characters WHERE id IN ($placeholders)");
+        $stmt = $this->pdo->prepare("SELECT id, username FROM neucore_characters WHERE id IN ($placeholders)");
         try {
             $stmt->execute($characterIds);
         } catch (PDOException $e) {
@@ -103,7 +103,7 @@ class Service implements ServiceInterface
 
         // create character
         $stmt = $this->pdo->prepare("
-            INSERT INTO characters (id, name, username, corporation_name, alliance_name, last_update) 
+            INSERT INTO neucore_characters (id, name, username, corporation_name, alliance_name, last_update) 
             VALUES (:id, :name, :username, :corporation_name, :alliance_name, :last_update)"
         );
         try {
@@ -153,7 +153,7 @@ class Service implements ServiceInterface
 
         // update character - do not change name
         $stmtUpdate = $this->pdo->prepare(
-            "UPDATE characters 
+            "UPDATE neucore_characters 
             SET last_update = :last_update, corporation_name = :corporation_name, alliance_name = :alliance_name
             WHERE id = :id"
         );
@@ -222,7 +222,7 @@ class Service implements ServiceInterface
     {
         $this->dbConnect();
 
-        $stmt = $this->pdo->prepare("SELECT id, username FROM characters ORDER BY last_update");
+        $stmt = $this->pdo->prepare("SELECT id, username FROM neucore_characters ORDER BY last_update");
         try {
             $stmt->execute();
         } catch (PDOException $e) {
@@ -263,7 +263,7 @@ class Service implements ServiceInterface
      */
     private function getForumUsername(int $characterId): string
     {
-        $stmt = $this->pdo->prepare("SELECT username FROM characters WHERE id = :id");
+        $stmt = $this->pdo->prepare("SELECT username FROM neucore_characters WHERE id = :id");
         try {
             $stmt->execute([':id' => $characterId]);
         } catch (PDOException $e) {
