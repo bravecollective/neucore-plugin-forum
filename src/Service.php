@@ -338,7 +338,9 @@ class Service implements ServiceInterface
     {
         $argsString = [];
         foreach ($args as $arg) {
-            $argsString[] = escapeshellarg($arg);
+            if (!empty($arg)) {
+                $argsString[] = escapeshellarg($arg);
+            }
         }
         return implode(' ', $argsString);
     }
