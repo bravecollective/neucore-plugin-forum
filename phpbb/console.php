@@ -8,7 +8,7 @@ ini_set('display_errors', '1');
 require_once __DIR__.'/../phpbb/PhpBB.php';
 
 if (count($argv) < 3) {
-    echo "Missing arguments (3).\n";
+    echo "console.php: Missing arguments (3).\n";
     exit(1);
 }
 

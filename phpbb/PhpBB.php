@@ -143,7 +143,7 @@ final class PhpBB
     public function register(array $args): ?string
     {
         if (count($args) < 7) {
-            return 'Missing arguments (7).';
+            return 'register: Missing arguments (7).';
         }
 
         $username = $args[0];
@@ -177,14 +177,14 @@ final class PhpBB
 
     public function updateAccount(array $args): ?string
     {
-        if (count($args) < 4) {
-            return 'Missing arguments (4).';
+        if (count($args) < 3) {
+            return 'updateAccount: Missing arguments (3).';
         }
 
         $username = $args[0];
         $corporationName = $args[1];
         $allianceName = $args[2];
-        $groups = $args[3];
+        $groups = $args[3] ?? '';
 
         // get forum user
         $userId = $this->brave_bb_user_name_to_id($username);
@@ -208,7 +208,7 @@ final class PhpBB
     public function resetPassword(array $args): ?string
     {
         if (count($args) < 2) {
-            return 'Missing arguments (2).';
+            return 'resetPassword: Missing arguments (2).';
         }
 
         $username = $args[0];
