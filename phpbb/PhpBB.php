@@ -177,13 +177,13 @@ final class PhpBB
 
     public function updateAccount(array $args): ?string
     {
-        if (count($args) < 3) {
-            return 'updateAccount: Missing arguments (3).';
+        if (count($args) < 2) {
+            return 'updateAccount: Missing arguments (2).';
         }
 
         $username = $args[0];
         $corporationName = $args[1];
-        $allianceName = $args[2];
+        $allianceName = $args[2] ?? '';
         $groups = $args[3] ?? '';
 
         // get forum user
