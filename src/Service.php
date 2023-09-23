@@ -169,6 +169,12 @@ class Service implements ServiceInterface
             throw new Exception();
         }
 
+        if (empty($character->corporationName)) {
+            // The update script needs the corporation name. If it is missing that
+            // character (probably) does not exist on Neucore.
+            return;
+        }
+
         $args = $this->getArgsString([
             $this->configFile,
             'update-account',
