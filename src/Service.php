@@ -121,7 +121,6 @@ class Service implements ServiceInterface
         }
 
         $password = $this->generatePassword();
-        $ipAddress = $_SERVER['REMOTE_ADDR'] ?? '';
 
         $args = $this->getArgsString([
             $this->configFile,
@@ -129,10 +128,9 @@ class Service implements ServiceInterface
             $username,
             $password,
             $character->id,
-            $this->getGroupNames($groups),
             $character->corporationName,
-            $character->allianceName,
-            $ipAddress,
+            empty($character->allianceName) ? Shared::PLACEHOLDER_NO_ALLIANCE : $character->allianceName,
+            $this->getGroupNames($groups),
         ]);
         exec("$this->console $args", $output, $retVal);
         if ($retVal !== 0) {
@@ -180,7 +178,7 @@ class Service implements ServiceInterface
             'update-account',
             $this->getForumUsername($character->id),
             $character->corporationName,
-            $character->allianceName,
+            empty($character->allianceName) ? Shared::PLACEHOLDER_NO_ALLIANCE : $character->allianceName,
             $this->getGroupNames($groups),
         ]);
         exec("$this->console $args", $output, $retVal);

@@ -149,19 +149,18 @@ final class PhpBB
         $username = $args[0];
         $password = $args[1];
         $characterId = $args[2];
-        $groups = $args[3];
-        $corporationName = $args[4];
-        $allianceName = $args[5];
-        $ipAddress = $args[6];
+        $corporationName = $args[3];
+        $allianceName = $args[4];
+        $groups = $args[5] ?? '';
 
-        $userId = $this->brave_bb_account_create($characterId, $username, $ipAddress);
+        $userId = $this->brave_bb_account_create($characterId, $username);
         if (!$userId) {
             return 'Failed to add user.';
         }
 
         $success = $this->brave_bb_account_update($userId, [
             'corporation_name' => $corporationName,
-            'alliance_name' => $allianceName,
+            'alliance_name' => $allianceName === Shared::PLACEHOLDER_NO_ALLIANCE ? '' : $allianceName,
             'core_tags' => $groups
         ]);
         if (!$success) {
@@ -183,7 +182,7 @@ final class PhpBB
 
         $username = $args[0];
         $corporationName = $args[1];
-        $allianceName = $args[2] ?? '';
+        $allianceName = $args[2];
         $groups = $args[3] ?? '';
 
         // get forum user
@@ -195,7 +194,7 @@ final class PhpBB
         // update forum groups
         $success = $this->brave_bb_account_update($userId, [
             'corporation_name' => $corporationName,
-            'alliance_name' => $allianceName,
+            'alliance_name' => $allianceName === Shared::PLACEHOLDER_NO_ALLIANCE ? '' : $allianceName,
             'core_tags' => $groups
         ]);
         if (!$success) {
@@ -290,14 +289,14 @@ final class PhpBB
         $this->brave_bb_account_update($user_name);
     }*/
 
-    private function brave_bb_account_create($character_id, $user_name, $ipAddress): ?int
+    private function brave_bb_account_create($character_id, $user_name): ?int
     {
         $user = array(
             'username' => $user_name,
             'user_email' => '',
             'group_id' => $this->configGroups['register'],
             'user_type' => USER_NORMAL,
-            'user_ip' => $ipAddress,
+            'user_ip' => '',
             'user_new' => ($this->phpBBConfig['new_member_post_limit']) ? 1 : 0,
             'user_avatar' => 'https://image.eveonline.com/Character/' . $character_id . '_128.jpg',
             'user_avatar_type' => 2,
