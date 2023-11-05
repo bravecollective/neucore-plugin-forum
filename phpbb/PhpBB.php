@@ -142,8 +142,8 @@ final class PhpBB
 
     public function register(array $args): ?string
     {
-        if (count($args) < 7) {
-            return 'register: Missing arguments (7).';
+        if (count($args) < 5) {
+            return 'register: Missing arguments (5).';
         }
 
         $username = $args[0];
@@ -188,7 +188,7 @@ final class PhpBB
         // get forum user
         $userId = $this->brave_bb_user_name_to_id($username);
         if (!$userId) {
-            return 'User not found.';
+            return "User '$username' not found.";
         }
 
         // update forum groups
@@ -216,7 +216,7 @@ final class PhpBB
         // get forum user
         $userId = $this->brave_bb_user_name_to_id($username);
         if (!$userId) {
-            return 'User not found.';
+            return "User '$username' not found.";
         }
 
         if (!$this->brave_bb_account_password($userId, $password)) {
