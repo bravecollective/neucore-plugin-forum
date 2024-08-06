@@ -39,6 +39,6 @@ composer install
 
 ## Debug
 
-The plugin writes the file defined in the `NEUCORE_PLUGIN_FORUM_CONFIG_FILE` environment variable, e.g.
-`/var/www/phpbb/config.php` if it does not already exist. This file must be deleted if any of the other 
-environment variables change so that it is recreated with the correct values.
+The plugin writes the phpbb configuration file `phpBB3/config.php` if it does not already exist. 
+This file must be deleted if any of the `NEUCORE_PLUGIN_FORUM_DB_*` environment variables changes 
+so that it is recreated with the correct values.
