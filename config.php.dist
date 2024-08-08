@@ -1,7 +1,6 @@
 <?php
 
 return [
-    'cfg_bb_path' => '/app/phpbb/htdocs/',
     'cfg_bb_groups' => array(
         'register' => 2,
         'inactive' => 14,
