@@ -3,14 +3,14 @@
     "type": "project",
     "license": "MIT",
     "require": {
-        "php": "^8.0.2",
+        "php": "^8.1",
         "ext-pdo": "*",
-        "tkhamez/neucore-plugin": "^3.0",
+        "tkhamez/neucore-plugin": "^4.0",
         "psr/log": "^3.0"
     },
     "config": {
         "platform": {
-            "php": "8.0.2"
+            "php": "8.1.0"
         }
     }
 }
